@@ -1,0 +1,57 @@
+version: '3.2'
+
+services:
+  blockchain_crawler:
+    depends_on:
+      - mongo
+      - postgresql
+    image: newayict/blockchain_crawler:latest
+    volumes:
+      - ./crawler/:/var/lib/crawler
+    networks:
+      - cdm
+    command: python3 /var/lib/crawler/main.py
+
+  blockchain_etl:
+    depends_on:
+      - mongo
+      - postgresql
+    image: newayict/blockchain_crawler:latest
+    volumes:
+      - ./crawler/:/var/lib/crawler
+    networks:
+      - cdm
+    command: python3 /var/lib/crawler/etl_runner.py
+
+  mongo:
+    image: mongo:4.4-bionic
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: qweqwe123
+    ports:
+      - 27018:27017
+    volumes:
+      - cdm_mongo:/data/db
+    networks:
+      - cdm
+
+  postgresql:
+    image: postgres:10
+    environment:
+      POSTGRES_DB: cc_crawler
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: qweqwe123
+    ports:
+      - 5241:5432
+    volumes:
+      - cdm_postgresql:/var/lib/postgresql/data
+    networks:
+      - cdm
+    command: postgres -c log_statement=none
+
+volumes:
+  cdm_mongo:
+  cdm_postgresql:
+
+networks:
+  cdm:

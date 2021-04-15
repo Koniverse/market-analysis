@@ -1,0 +1,64 @@
+x-superset-depends-on: &superset-depends-on
+  - db
+  - redis
+x-superset-volumes: &superset-volumes
+  # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
+  - ./docker-init.sh:/app/docker-init.sh
+  - ./pythonpath_dev:/app/pythonpath
+  - superset_home:/app/superset_home
+  - superset_cache:/app/superset_cache
+
+version: "3.7"
+services:
+  redis:
+    image: redis:3.2
+    restart: unless-stopped
+    ports:
+      - "6079:6379"
+    volumes:
+      - redis:/data
+    sysctls:
+      - net.core.somaxconn=65535
+    networks:
+      - superset
+
+  db:
+    env_file: ./.env
+    image: postgres:10
+    restart: unless-stopped
+    ports:
+      - "5032:5432"
+    volumes:
+      - db_home:/var/lib/postgresql/data
+    networks:
+      - superset
+
+  superset:
+    image: newayict/superset:latest
+    #command: gunicorn -w 2 -k gevent --timeout 360 -b  0.0.0.0:8088 --limit-request-line 0 --limit-request-field_size 0 "superset.app:create_app()"
+    command: flask run -p 8088 --with-threads --host=0.0.0.0
+    env_file: ./.env
+    restart: unless-stopped
+    ports:
+      - 8088:8088
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+    networks:
+      - superset
+    # Run this command after service start sudo docker exec -it [container_id] /app/docker-init.sh
+
+volumes:
+  superset_cache:
+    external: false
+  superset_home:
+    external: false
+  db_home:
+    external: false
+  redis:
+    external: false
+
+networks:
+  superset:
+  hostnet:
+    external:
+      name: host
